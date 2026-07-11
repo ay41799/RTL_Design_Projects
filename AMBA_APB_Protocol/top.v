@@ -1,30 +1,28 @@
 
-`include "apb_master.v"  // Include the master module
-`include "apb_slave.v"   // Include the slave module
+`include "apb_master.v"  
+`include "apb_slave.v"  
 
 module apb_top (
-    input wire pclk,                    // Clock signal
-    input wire presetn,                 // Active-low reset
-    input wire transfer,                // Signal to start transfer
-    input wire read,                    // Read control signal
-    input wire write,                   // Write control signal
-    input wire [8:0] apb_write_paddr,   // Write address from master
-    input wire [7:0] apb_write_data,    // Write data from master
-    input wire [8:0] apb_read_paddr,    // Read address from master
-    output wire pslverr,                // Slave error signal
-    output wire [7:0] apb_read_data_out // Data output during read
+    input wire pclk,                    
+    input wire presetn,                 
+    input wire transfer,                
+    input wire read,                    
+    input wire write,                   
+    input wire [8:0] apb_write_paddr,   
+    input wire [7:0] apb_write_data,   
+    input wire [8:0] apb_read_paddr,   
+    output wire pslverr,                
+    output wire [7:0] apb_read_data_out 
 );
 
-    // Internal wires to connect master and slaves
-    wire penable;                 // Enable signal
-    wire pwrite;                  // Write control signal
-    wire [8:0] paddr;             // Address bus
-    wire [7:0] pwdata;            // Write data bus
-    wire [7:0] prdata1, prdata2;  // Read data from slaves
-    wire pready1, pready2, pready; // Ready signals
-    wire psel1, psel2;            // Slave select signals
+    wire penable;                 
+    wire pwrite;                  
+    wire [8:0] paddr;            
+    wire [7:0] pwdata;            
+    wire [7:0] prdata1, prdata2; 
+    wire pready1, pready2, pready; 
+    wire psel1, psel2;           
 
-    // Master instance
     apb_master master_inst (
         .presetn(presetn),
         .pclk(pclk),
@@ -36,7 +34,7 @@ module apb_top (
         .apb_write_data(apb_write_data),
         .pready(pready),
         .pslverr(pslverr),
-        .prdata(prdata1 | prdata2), // Combine read data buses (MUX internally based on psel)
+        .prdata(prdata1 | prdata2), 
         .psel1(psel1),
         .psel2(psel2),
         .penable(penable),
@@ -46,35 +44,34 @@ module apb_top (
         .apb_read_data_out(apb_read_data_out)
     );
 
-    // Slave 1 instance
+
     apb_slave slave1_inst (
         .pclk(pclk),
         .presetn(presetn),
         .psel(psel1),
         .penable(penable),
         .pwrite(pwrite),
-        .paddr(paddr[7:0]), // Addressing within slave 1 memory range
+        .paddr(paddr[7:0]), 
         .pwdata(pwdata),
         .prdata(prdata1),
         .pready(pready1),
         .pslverr(pslverr)
     );
 
-    // Slave 2 instance
+    
     apb_slave slave2_inst (
         .pclk(pclk),
         .presetn(presetn),
         .psel(psel2),
         .penable(penable),
         .pwrite(pwrite),
-        .paddr(paddr[7:0]), // Addressing within slave 2 memory range
+        .paddr(paddr[7:0]),
         .pwdata(pwdata),
         .prdata(prdata2),
         .pready(pready2),
         .pslverr(pslverr)
     );
 
-    // Combine ready signals from slaves
     assign pready = (psel1 && pready1) || (psel2 && pready2);
 
 endmodule
