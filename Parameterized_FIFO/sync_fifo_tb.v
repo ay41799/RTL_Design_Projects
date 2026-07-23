@@ -33,20 +33,20 @@
   
   task write_data(input [DATA_WIDTH-1:0] d_in);
 	  begin
-		  @(posedge clk)
+		  @(posedge clk);
 			 cs = 1; wr_en = 1;
 			 data_in = d_in;
 			 $display($time, " write_data data_in = %0d", data_in);
-			@(posedge clk)
+		  @(posedge clk);
 		   cs = 1; wr_en = 0;
 		end
 	endtask
 	
 	task read_data();
 	    begin
-		    @(posedge clk)  
+			@(posedge clk); 
 			   cs = 1; rd_en = 1;
-			  @(posedge clk)
+			@(posedge clk);
 		     $display($time, " read_data data_out = %0d", data_out);
 		     cs = 1; rd_en = 0;
   		end
