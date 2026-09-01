@@ -82,7 +82,7 @@ module uart_fifo_tb;
 
     initial begin
 
-        // Initial values
+    
         rst     = 1'b0;
         wr_enb  = 1'b0;
         rdy_clr = 1'b0;
