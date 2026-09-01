@@ -42,4 +42,4 @@ Verified using a Verilog testbench that applies operand/control combinations and
 - **HDL:** Verilog / SystemVerilog
 - **Simulation:** Icarus Verilog (via EDA Playground)
 
-## Repository Structure
+
