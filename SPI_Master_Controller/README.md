@@ -31,7 +31,13 @@ IDLE → LOAD → SHIFT → DONE → IDLE
 
 Testbench `spi_top_tb` drives 8-bit data through the master, waits for `rx_valid` from the slave, and checks it matches.
 
-    iverilog -Wall -g2012 design.sv testbench.sv && unbuffer vvp a.out
+**In Vivado:**
+1. Create a new project (or add sources to an existing one)
+2. Add `design.sv` (or your RTL file) under Design Sources
+3. Add `spi_top_tb.sv` under Simulation Sources
+4. Set `spi_top_tb` as the top module for simulation
+5. Run **Flow Navigator → Simulation → Run Behavioral Simulation**
+6. Check the Tcl console / simulation log for the PASS/FAIL message
 
 ## Extensions
 
