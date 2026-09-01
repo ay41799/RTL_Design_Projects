@@ -39,7 +39,7 @@ Verified using a Verilog testbench that applies operand/control combinations and
 
 ## Tools Used
 
-- **HDL:** Verilog / SystemVerilog
-- **Simulation:** Icarus Verilog (via EDA Playground)
+- **HDL:** Verilog 
+- **Simulation:** Xilinx Vivado
 
 
