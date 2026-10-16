@@ -1,103 +1,107 @@
+`timescale 1ns / 1ps
 module reciever (
-    input clk,
-    input rst,
-    input rdy_clr,
-    input clk_enb,
-    input rx,
+    input  wire clk,
+    input  wire rst,
+    input  wire clk_enb,
+    input  wire rx,
 
-    output reg rdy,
-    output reg [7:0] data_out
+    output reg  rdy,
+    output reg  [7:0] data_out
 );
 
-    parameter start_state = 2'b00;
-    parameter data_state  = 2'b01;
-    parameter stop_state  = 2'b10;
+    localparam [1:0]
+        IDLE  = 2'd0,
+        START = 2'd1,
+        DATA  = 2'd2,
+        STOP  = 2'd3;
 
     reg [1:0] state;
-
     reg [3:0] sample;
-    reg [2:0] counter;
-    reg [7:0] temp_data;
+    reg [2:0] bit_count;
+    reg [7:0] shift_reg;
+
+    (* ASYNC_REG = "TRUE" *) reg rx_meta;
+    (* ASYNC_REG = "TRUE" *) reg rx_sync;
 
     always @(posedge clk) begin
-
         if (rst) begin
-            rdy       <= 1'b0;
-            state     <= start_state;
-            sample    <= 4'd0;
-            data_out  <= 8'd0;
-            counter   <= 3'd0;
-            temp_data <= 8'd0;
+            rx_meta <= 1'b1;
+            rx_sync <= 1'b1;
         end
-
         else begin
+            rx_meta <= rx;
+            rx_sync <= rx_meta;
+        end
+    end
 
-            if (rdy_clr)
-                rdy <= 1'b0;
+    always @(posedge clk) begin
+        if (rst) begin
+            state     <= IDLE;
+            sample    <= 0;
+            bit_count <= 0;
+            shift_reg <= 0;
+            data_out  <= 0;
+            rdy       <= 0;
+        end
+        else begin
+            rdy <= 0;
 
             if (clk_enb) begin
-
                 case (state)
-                  
 
-                    start_state: begin
+                    IDLE: begin
+                        sample <= 0;
 
-                        if (!rx || sample != 0)
-                            sample <= sample + 1'b1;
-
-                        if (sample == 15) begin
-
-                            if (!rx) begin
-                                state     <= data_state;
-                                sample    <= 0;
-                                counter   <= 0;
-                                temp_data <= 0;
-                            end
-
-                            else begin
-                                sample <= 0;
-                            end
-                        end
+                        if (!rx_sync)
+                            state <= START;
                     end
-                  
-                    data_state: begin
 
-                        if (sample == 15)
+                    START: begin
+                        if (sample == 7) begin
                             sample <= 0;
+
+                            if (!rx_sync) begin
+                                bit_count <= 0;
+                                state <= DATA;
+                            end
+                            else
+                                state <= IDLE;
+                        end
                         else
                             sample <= sample + 1'b1;
-
-                        // Sample in middle of bit
-                        if (sample == 8) begin
-                            temp_data[counter] <= rx;
-                            counter <= counter + 1'b1;
-                        end
-
-                        if (counter == 7 && sample == 15) begin
-                            state  <= stop_state;
-                            sample <= 0;
-                        end
                     end
 
-                    stop_state: begin
-
+                    DATA: begin
                         if (sample == 15) begin
+                            sample <= 0;
 
-                            state    <= start_state;
-                            data_out <= temp_data;
-                            rdy      <= 1'b1;
-                            sample   <= 0;
+                            shift_reg[bit_count] <= rx_sync;
+
+                            if (bit_count == 7)
+                                state <= STOP;
+                            else
+                                bit_count <= bit_count + 1'b1;
                         end
-
-                        else begin
+                        else
                             sample <= sample + 1'b1;
+                    end
+
+                    STOP: begin
+                        if (sample == 15) begin
+                            sample <= 0;
+                            state <= IDLE;
+
+                            if (rx_sync) begin
+                                data_out <= shift_reg;
+                                rdy <= 1'b1;
+                            end
                         end
+                        else
+                            sample <= sample + 1'b1;
                     end
 
-
-                    default: begin
-                        state <= start_state;
-                    end
+                    default:
+                        state <= IDLE;
 
                 endcase
             end
@@ -105,3 +109,4 @@ module reciever (
     end
 
 endmodule
+
