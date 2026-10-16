@@ -1,60 +1,55 @@
+`timescale 1ns / 1ps
 module fifo_sync #(
-    parameter FIFO_DEPTH = 8,
-    parameter DATA_WIDTH = 8
+    parameter integer FIFO_DEPTH = 8,
+    parameter integer DATA_WIDTH = 8
 )(
-    input clk,
-    input rst_n,
-    input cs,
-    input wr_en,
-    input rd_en,
+    input  wire clk,
+    input  wire rst_n,
+    input  wire cs,
+    input  wire wr_en,
+    input  wire rd_en,
 
-    input  [DATA_WIDTH-1:0] data_in,
-    output reg [DATA_WIDTH-1:0] data_out,
+    input  wire [DATA_WIDTH-1:0] data_in,
+    output reg  [DATA_WIDTH-1:0] data_out,
 
-    output empty,
-    output full
+    output wire empty,
+    output wire full
 );
 
-    localparam FIFO_DEPTH_LOG = $clog2(FIFO_DEPTH);
+    localparam integer PTR_W = $clog2(FIFO_DEPTH);
 
     reg [DATA_WIDTH-1:0] fifo [0:FIFO_DEPTH-1];
 
-    reg [FIFO_DEPTH_LOG:0] write_pointer;
-    reg [FIFO_DEPTH_LOG:0] read_pointer;
+    reg [PTR_W:0] write_pointer;
+    reg [PTR_W:0] read_pointer;
 
-    always @(posedge clk or negedge rst_n) begin
-
-        if (!rst_n) begin
-            write_pointer <= 0;
-        end
-
-        else if (cs && wr_en && !full) begin
-            fifo[write_pointer[FIFO_DEPTH_LOG-1:0]]
-                <= data_in;
-
-            write_pointer <= write_pointer + 1'b1;
-        end
-    end
-  
-    always @(posedge clk or negedge rst_n) begin
-
-        if (!rst_n) begin
-            read_pointer <= 0;
-            data_out <= 0;
-        end
-
-        else if (cs && rd_en && !empty) begin
-            data_out <= fifo[read_pointer[FIFO_DEPTH_LOG-1:0]];
-
-            read_pointer <= read_pointer + 1'b1;
-        end
-    end
-
-    assign empty = (read_pointer == write_pointer);
+    assign empty = (write_pointer == read_pointer);
 
     assign full =
-        (read_pointer ==
-        {~write_pointer[FIFO_DEPTH_LOG],
-         write_pointer[FIFO_DEPTH_LOG-1:0]});
+        (write_pointer[PTR_W] != read_pointer[PTR_W]) &&
+        (write_pointer[PTR_W-1:0] ==
+         read_pointer[PTR_W-1:0]);
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            write_pointer <= 0;
+            read_pointer  <= 0;
+            data_out      <= 0;
+        end
+        else begin
+
+            if (cs && wr_en && !full) begin
+                fifo[write_pointer[PTR_W-1:0]] <= data_in;
+                write_pointer <= write_pointer + 1'b1;
+            end
+
+            if (cs && rd_en && !empty) begin
+                data_out <= fifo[read_pointer[PTR_W-1:0]];
+                read_pointer <= read_pointer + 1'b1;
+            end
+
+        end
+    end
 
 endmodule
+
