@@ -1,94 +1,85 @@
+`timescale 1ns / 1ps
 module transmitter (
-    input clk,
-    input rst,
+    input  wire clk,
+    input  wire rst,
+    input  wire wr_enb,
+    input  wire tx_clk,
+    input  wire [7:0] data_in,
 
-    input wr_enb,
-    input tx_clk,
-
-    input [7:0] data_in,
-
-    output reg data_out_temp,
-    output tx_busy
+    output reg  data_out_temp,
+    output wire tx_busy
 );
 
-    parameter idle_state  = 2'b00;
-    parameter start_state = 2'b01;
-    parameter data_state  = 2'b10;
-    parameter stop_state  = 2'b11;
+    localparam [2:0]
+        IDLE  = 3'd0,
+        ARM   = 3'd1,
+        START = 3'd2,
+        DATA  = 3'd3,
+        STOP  = 3'd4;
 
-    reg [1:0] state;
-    reg [2:0] counter;
+    reg [2:0] state;
+    reg [7:0] shift_reg;
+    reg [2:0] bit_count;
 
-    reg [7:0] data_input_temp;
+    assign tx_busy = (state != IDLE);
 
     always @(posedge clk) begin
-
         if (rst) begin
-
-            data_out_temp  <= 1'b1;
-            state          <= idle_state;
-            counter        <= 3'b000;
-            data_input_temp <= 8'd0;
+            state         <= IDLE;
+            shift_reg     <= 0;
+            bit_count     <= 0;
+            data_out_temp <= 1'b1;
         end
-
         else begin
-
             case (state)
 
-                idle_state: begin
+                IDLE: begin
+                    data_out_temp <= 1'b1;
 
                     if (wr_enb) begin
-
-                        state           <= start_state;
-                        data_input_temp <= data_in;
-                        counter         <= 3'b000;
-                    end
-
-                    else begin
-                        state <= idle_state;
+                        shift_reg <= data_in;
+                        bit_count <= 0;
+                        state <= ARM;
                     end
                 end
 
-                start_state: begin
-
+                ARM: begin
                     if (tx_clk) begin
-
-                        state         <= data_state;
                         data_out_temp <= 1'b0;
-                    end
-
-                    else begin
-                        state <= start_state;
+                        state <= START;
                     end
                 end
 
-                data_state: begin
-
+                START: begin
                     if (tx_clk) begin
-
-                        data_out_temp <= data_input_temp[counter];
-
-                        if (counter == 3'b111)
-                            state <= stop_state;
-
-                        else
-                            counter <= counter + 1'b1;
+                        data_out_temp <= shift_reg[0];
+                        state <= DATA;
                     end
                 end
 
-                stop_state: begin
-
+                DATA: begin
                     if (tx_clk) begin
+                        if (bit_count == 7) begin
+                            data_out_temp <= 1'b1;
+                            state <= STOP;
+                        end
+                        else begin
+                            bit_count <= bit_count + 1'b1;
+                            data_out_temp <=
+                                shift_reg[bit_count + 1'b1];
+                        end
+                    end
+                end
 
+                STOP: begin
+                    if (tx_clk) begin
                         data_out_temp <= 1'b1;
-                        state <= idle_state;
+                        state <= IDLE;
                     end
                 end
-
 
                 default: begin
-
-                    state         <= idle_state;
+                    state <= IDLE;
                     data_out_temp <= 1'b1;
                 end
 
@@ -96,7 +87,6 @@ module transmitter (
         end
     end
 
-    assign tx_busy = (state != idle_state);
 endmodule
 
-endmodule
+
